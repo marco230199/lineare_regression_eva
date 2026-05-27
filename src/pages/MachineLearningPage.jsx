@@ -136,6 +136,9 @@ export default function MachineLearningPage() {
   return (
     <main style={{ minHeight: "100vh", backgroundColor: "#0d1117", color: "#e6edf3", padding: "24px", fontFamily: "'IBM Plex Mono', monospace" }}>
       <div style={{ maxWidth: "1280px", margin: "0 auto" }}>
+        <h1 style={{ fontFamily: "'Spectral', serif", fontSize: "clamp(24px, 5vw, 40px)", fontWeight: 600, margin: "0 0 12px", letterSpacing: "-0.02em", color: "#e6edf3" }}>
+          Machine Learning: Künstliche Intelligenz
+        </h1>
         <header style={{ marginBottom: "20px", textAlign: "left" }}>
           <h1 style={{ fontSize: "28px", fontWeight: "bold", margin: "0 0 8px" }}>Machine Learning: Schritte zuordnen</h1>
         </header>

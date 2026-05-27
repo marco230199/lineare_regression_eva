@@ -134,6 +134,7 @@ export default function LineareRegressionPage() {
                   <li>Die Lerndauer einer Person mit der Note <InlineMath math={String.raw`2`} />.</li>
                   <li>In der Stadt hat ein neues Sonnenbrillengeschäft aufgemacht. Damit wurden sehr viel mehr Sonnenbrillen als die letzten Jahre verkauft, 200 Sonnenbrillen an der Zahl. Berechne, wie viel Eiscreme verkauft wurde.</li>
                   <li>Die Anzahl der Bakterien nach <InlineMath math={String.raw`20`} /> Tagen.</li>
+                  <li>Das Leistungsvermögen einer Person mit einem Stresslevel von <InlineMath math={String.raw`8.9`} />.</li>
                 </ul>
               </li>
               <li>Beurteile, wie sinnvoll deine Ergebnisse / Vorhersagen sind.</li>
@@ -213,18 +214,18 @@ export default function LineareRegressionPage() {
                 </g>
               ))}
 
-              <g transform={`translate(${SVG_WIDTH - 232}, ${CHART_MARGIN.top + 8})`}>
+              {/* <g transform={`translate(${SVG_WIDTH - 232}, ${CHART_MARGIN.top + 8})`}>
                 <rect width="206" height="50" rx="12" fill="#161b22" stroke="rgba(48, 54, 61, 0.45)" strokeWidth="1" />
                 <line x1="16" y1="22" x2="50" y2="22" stroke="#1f6feb" strokeWidth="4" strokeLinecap="round" />
                 <text x="60" y="27" fill="#8b949e" fontSize="12">deine Gerade</text>
-              </g>
+              </g> */}
             </svg>
             <div style={{ marginTop: "24px", border: "1px solid #30363d", borderRadius: "8px", padding: "16px", backgroundColor: "#161b22" }}>
               <div style={{ fontSize: "16px", fontWeight: "600", marginBottom: "16px" }}>Werte</div>
 
               <div style={{ backgroundColor: "#1f3a5f", padding: "16px", borderRadius: "8px", marginBottom: "12px" }}>
-                <div style={{ fontSize: "12px", color: "#79c0ff", marginBottom: "4px" }}>Deine Gerade</div>
-                <div style={{ fontFamily: "monospace", fontSize: "18px", fontWeight: "bold", color: "#e6edf3" }}>ŷ = {slope.toFixed(2)}x {intercept >= 0 ? "+" : "−"} {Math.abs(intercept).toFixed(2)}</div>
+                {/* <div style={{ fontSize: "12px", color: "#79c0ff", marginBottom: "4px" }}>Deine Gerade</div>
+                <div style={{ fontFamily: "monospace", fontSize: "18px", fontWeight: "bold", color: "#e6edf3" }}>ŷ = {slope.toFixed(2)}x {intercept >= 0 ? "+" : "−"} {Math.abs(intercept).toFixed(2)}</div> */}
               </div>
             </div>
           </div>

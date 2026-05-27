@@ -150,6 +150,9 @@ export default function LossfunctionPage() {
 
   return (
     <div style={{ minHeight: "100vh", backgroundColor: "#0d1117", padding: "24px", color: "#e6edf3", fontFamily: "'IBM Plex Mono', monospace" }}>
+      <h1 style={{ fontFamily: "'Spectral', serif", fontSize: "clamp(24px, 5vw, 40px)", fontWeight: 600, margin: "0 0 12px", letterSpacing: "-0.02em", color: "#e6edf3" }}>
+          Verlustfunktion optimieren
+        </h1>
       <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
         <div style={{ marginBottom: "24px" }}>
           <h1 style={{ fontSize: "28px", fontWeight: "bold", marginBottom: "8px" }}>Simulation: Lineare Regression</h1>

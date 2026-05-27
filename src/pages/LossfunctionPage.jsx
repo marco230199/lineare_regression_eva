@@ -21,6 +21,27 @@ function InlineMath({ math }) {
   );
 }
 
+function BlockMath({ math }) {
+  return (
+    <div
+      dangerouslySetInnerHTML={{
+        __html: katex.renderToString(math, {
+          displayMode: true,
+          throwOnError: false,
+        }),
+      }}
+    />
+  );
+}
+
+function toSubscript(n) {
+  const map = { '0': '₀', '1': '₁', '2': '₂', '3': '₃', '4': '₄', '5': '₅', '6': '₆', '7': '₇', '8': '₈', '9': '₉' };
+  return String(n)
+    .split('')
+    .map((d) => map[d] ?? d)
+    .join('');
+}
+
 function niceTickStep(value) {
   const raw = Math.max(1, value / 5);
   const steps = [1, 5, 10, 50, 100, 500, 1000];
@@ -35,6 +56,7 @@ export default function LossfunctionPage() {
   const [showLine, setShowLine] = useState(true);
   const [showResiduals, setShowResiduals] = useState(true);
   const [showLoss, setShowLoss] = useState(true);
+  const [showLossFormula, setShowLossFormula] = useState(false);
   const [showOptimalLine, setShowOptimalLine] = useState(false);
   const [draggedId, setDraggedId] = useState(null);
 
@@ -150,6 +172,9 @@ export default function LossfunctionPage() {
 
   return (
     <div style={{ minHeight: "100vh", backgroundColor: "#0d1117", padding: "24px", color: "#e6edf3", fontFamily: "'IBM Plex Mono', monospace" }}>
+      <h1 style={{ fontFamily: "'Spectral', serif", fontSize: "clamp(24px, 5vw, 40px)", fontWeight: 600, margin: "0 0 12px", letterSpacing: "-0.02em", color: "#e6edf3" }}>
+          Verlustfunktion
+        </h1>
       <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
         <div style={{ marginBottom: "24px" }}>
           <h1 style={{ fontSize: "28px", fontWeight: "bold", marginBottom: "8px" }}>Simulation: Lineare Regression</h1>
@@ -252,7 +277,7 @@ export default function LossfunctionPage() {
                 />
               )}
 
-              {enrichedPoints.map((point) => (
+              {enrichedPoints.map((point, i) => (
                 <g key={point.id}>
                   <circle
                     cx={xScale(point.x)}
@@ -268,6 +293,9 @@ export default function LossfunctionPage() {
                       setDraggedId(point.id);
                     }}
                   />
+                  {showLossFormula && (
+                    <text x={xScale(point.x) + 10} y={yScale(point.y) - 10} fill="#79c0ff" fontSize="12" fontFamily="'IBM Plex Mono', monospace">{`y${toSubscript(i + 1)}`}</text>
+                  )}
                 </g>
               ))}
 
@@ -312,6 +340,18 @@ export default function LossfunctionPage() {
                   <div style={{ fontSize: "12px", color: "#3fb950", marginBottom: "8px" }}>Berechnete optimale Gerade</div>
                   <div style={{ fontFamily: "monospace", fontSize: "14px", color: "#e6edf3", marginBottom: "8px" }}>ŷ = {regression.slope.toFixed(2)}x {regression.intercept >= 0 ? "+" : "−"} {Math.abs(regression.intercept).toFixed(2)}</div>
                   <p style={{ fontSize: "12px", color: "#8b949e", margin: 0 }}>Die grün gestrichelte Linie minimiert die Summe der quadrierten Residuen.</p>
+                </div>
+              )}
+              <div style={{ marginTop: "12px", display: "flex", gap: "12px", alignItems: "center" }}>
+                <button onClick={() => setShowLossFormula((s) => !s)} style={{ padding: "8px 12px", backgroundColor: showLossFormula ? "#1f6feb" : "transparent", color: showLossFormula ? "#e6edf3" : "#1f6feb", border: showLossFormula ? "none" : "1px solid #1f6feb", borderRadius: "6px", cursor: "pointer", fontSize: "13px", fontWeight: "600" }}>
+                  {showLossFormula ? "Lossfunktion ausblenden" : "Lossfunktion L anzeigen"}
+                </button>
+                <div style={{ color: "#8b949e", fontSize: "13px" }}>Label der Punkte als y₁, y₂ ... anzeigen</div>
+              </div>
+
+              {showLossFormula && (
+                <div style={{ marginTop: "12px", backgroundColor: "#0f1720", padding: "12px", borderRadius: "8px", border: "1px solid #243447" }}>
+                  <BlockMath math={String.raw`L = (y_1-\hat{y}_1)^2 + (y_2-\hat{y}_2)^2 + \ldots + (y_n-\hat{y}_n)^2 \\ = (y_1 - (m x_1 + t))^2 + (y_2 - (m x_2 + t))^2 + \ldots + (y_n - (m x_n + t))^2`} />
                 </div>
               )}
             </div>
