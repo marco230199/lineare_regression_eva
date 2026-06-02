@@ -143,6 +143,22 @@ export default function LossfunctionPage() {
     }));
   }
 
+  function updateEditablePointValue(id, field, value) {
+    const parsed = parseFloat(value);
+    if (Number.isNaN(parsed)) return;
+    const clamped = field === "x" ? clamp(parsed, plotXMin, plotXMax) : clamp(parsed, plotYMin, plotYMax);
+
+    setDatasets((current) => ({
+      ...current,
+      [datasetKey]: {
+        ...current[datasetKey],
+        points: current[datasetKey].points.map((point) =>
+          point.id === id ? { ...point, [field]: clamped } : point
+        ),
+      },
+    }));
+  }
+
   function setLineToOptimal() {
     setSlope(round2(regression.slope));
     setIntercept(round2(regression.intercept));
@@ -151,23 +167,32 @@ export default function LossfunctionPage() {
   return (
     <div style={{ minHeight: "100vh", backgroundColor: "#0d1117", padding: "24px", color: "#e6edf3", fontFamily: "'IBM Plex Mono', monospace" }}>
       <h1 style={{ fontFamily: "'Spectral', serif", fontSize: "clamp(24px, 5vw, 40px)", fontWeight: 600, margin: "0 0 12px", letterSpacing: "-0.02em", color: "#e6edf3" }}>
-          Verlustfunktion optimieren
+          Lossfunktion optimieren
         </h1>
       <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
         <div style={{ marginBottom: "24px" }}>
           <h1 style={{ fontSize: "28px", fontWeight: "bold", marginBottom: "8px" }}>Simulation: Lineare Regression</h1>
           <section style={{ color: "#c9d1d9", marginBottom: "16px", textAlign: "left", lineHeight: 1.55 }}>
-            <h2 style={{ fontSize: "18px", fontWeight: "600", color: "#e6edf3", margin: "0 0 10px" }}>Aufgaben</h2>
+            <h2 style={{ fontSize: "18px", fontWeight: "600", color: "#e6edf3", margin: "0 0 10px" }}>Lernaufgaben</h2>
             <ol style={{ margin: 0, paddingLeft: "22px" }}>
               <li style={{ marginBottom: "6px" }}>
-                Gegeben sind die folgenden Datenpunkte: <InlineMath math={String.raw`(1,2), (2,3), (3,5)`} />. Für die Regressionsgerade sei bekannt, dass für den y-Achsenabschnitt <InlineMath math={String.raw`t = 1`} /> gilt. Also: <InlineMath math={String.raw`y = mx + 1`} />. Stelle einen Term für die Verlustfunktion <InlineMath math={String.raw`L`} /> in Abhängigkeit von <InlineMath math={String.raw`m`} /> auf.
+                Gegeben sind die folgenden Datenpunkte: <InlineMath math={String.raw`(1,2), (2,3), (3,5)`} />. Für die Regressionsgerade sei bekannt, dass für den y-Achsenabschnitt <InlineMath math={String.raw`t = \frac{1}{3}`} /> gilt. Also: <InlineMath math={String.raw`y = mx + \frac{1}{3}`} />. Versuche mithilfe des Datensatzes „Manuell" die optimale Steigung <InlineMath math={String.raw`m`} /> zu bestimmen.
               </li>
               <li style={{ marginBottom: "6px" }}>
-                Berechne den Wert von <InlineMath math={String.raw`m`} />, für den die Verlustfunktion <InlineMath math={String.raw`L`} /> minimal ist.
+                Stelle jetzt einen Term für die Lossfunktion <InlineMath math={String.raw`L`} /> in Abhängigkeit von <InlineMath math={String.raw`m`} /> für diese Situation auf.
+              </li>
+              <li style={{ marginBottom: "6px" }}>
+                Berechne den Wert von <InlineMath math={String.raw`m`} />, für den die Lossfunktion <InlineMath math={String.raw`L`} /> minimal ist.
                 <div style={{ color: "#8b949e", fontStyle: "italic", marginTop: "4px" }}>Hinweis: Erinnere dich, was du über das Bestimmen von Extremstellen von Funktionen gelernt hast.</div>
               </li>
+              <li style={{ marginBottom: "6px" }}>
+                Gib mithilfe deines Ergebnisses die optimale Regressionsgerade an und vergleiche mit der Simulation.
+              </li>
               <li>
-                Berechne die Regressionsgerade der drei Punkte <InlineMath math={String.raw`(1,1), (2,3), (5,6)`} />. Kontrolliere dein Ergebnis, indem du die Punkte im Datensatz "manuell" einstellst und dir dann die ideale Gerade anzeigen lässt.
+                Erstelle eine Schritt-für-Schritt-Anleitung, wie also die optimale Regressionsgerade berechnet wird.
+              </li>
+              <li>
+                (Optional) Bearbeite das Blatt ,,Lossfunktion optimieren mit zwei Unbekannten''
               </li>
             </ol>
           </section>
@@ -273,7 +298,7 @@ export default function LossfunctionPage() {
                 </g>
               ))}
 
-              <g transform={`translate(${SVG_WIDTH - 232}, ${CHART_MARGIN.top + 8})`}>
+              {/* <g transform={`translate(${SVG_WIDTH - 232}, ${CHART_MARGIN.top + 8})`}>
                 <rect width="206" height={showOptimalLine ? "78" : "50"} rx="12" fill="#161b22" stroke="rgba(48, 54, 61, 0.45)" strokeWidth="1" />
                 <line x1="16" y1="22" x2="50" y2="22" stroke="#1f6feb" strokeWidth="4" strokeLinecap="round" />
                 <text x="60" y="27" fill="#8b949e" fontSize="12">deine Gerade</text>
@@ -283,14 +308,14 @@ export default function LossfunctionPage() {
                     <text x="60" y="55" fill="#8b949e" fontSize="12">optimale Regression</text>
                   </>
                 )}
-              </g>
+              </g> */}
             </svg>
             <div style={{ marginTop: "24px", border: "1px solid #30363d", borderRadius: "8px", padding: "16px", backgroundColor: "#161b22" }}>
               <div style={{ fontSize: "16px", fontWeight: "600", marginBottom: "16px" }}>Werte</div>
 
               <div style={{ backgroundColor: "#1f3a5f", padding: "16px", borderRadius: "8px", marginBottom: "12px" }}>
-                <div style={{ fontSize: "12px", color: "#79c0ff", marginBottom: "4px" }}>Deine Gerade</div>
-                <div style={{ fontFamily: "monospace", fontSize: "18px", fontWeight: "bold", color: "#e6edf3" }}>ŷ = {slope.toFixed(2)}x {intercept >= 0 ? "+" : "−"} {Math.abs(intercept).toFixed(2)}</div>
+                {/* <div style={{ fontSize: "12px", color: "#79c0ff", marginBottom: "4px" }}>Deine Gerade</div>
+                <div style={{ fontFamily: "monospace", fontSize: "18px", fontWeight: "bold", color: "#e6edf3" }}>ŷ = {slope.toFixed(2)}x {intercept >= 0 ? "+" : "−"} {Math.abs(intercept).toFixed(2)}</div> */}
               </div>
 
               {showLoss && (
@@ -298,11 +323,11 @@ export default function LossfunctionPage() {
                   <div style={{ fontSize: "12px", color: "#f85149", marginBottom: "8px" }}>Loss deiner Gerade</div>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                     <div>
-                      <div style={{ fontSize: "11px", color: "#f85149" }}>SSE deiner Gerade</div>
+                      <div style={{ fontSize: "11px", color: "#f85149" }}>Loss deiner Gerade</div>
                       <div style={{ fontFamily: "monospace", fontSize: "20px", fontWeight: "bold", color: "#e6edf3" }}>{sseValue.toFixed(3)}</div>
                     </div>
                     <div>
-                      <div style={{ fontSize: "11px", color: "#3fb950" }}>SSE optimale Gerade</div>
+                      <div style={{ fontSize: "11px", color: "#3fb950" }}>Loss optimale Gerade</div>
                       <div style={{ fontFamily: "monospace", fontSize: "20px", fontWeight: "bold", color: "#e6edf3" }}>{regressionSseValue.toFixed(3)}</div>
                     </div>
                   </div>
@@ -388,6 +413,39 @@ export default function LossfunctionPage() {
                   <button onClick={resetEditableDataset} style={{ padding: "10px 16px", backgroundColor: "transparent", color: "#1f6feb", border: "1px solid #1f6feb", borderRadius: "6px", cursor: "pointer", fontSize: "13px", fontWeight: "600" }}>↻ Punkte zurücksetzen</button>
                 )}
               </div>
+
+              {dataset.editable && (
+                <div style={{ marginTop: "18px", padding: "16px", borderRadius: "8px", border: "1px solid #30363d", backgroundColor: "#0d1117" }}>
+                  <div style={{ fontSize: "14px", fontWeight: "600", marginBottom: "12px" }}>Datenpunkte direkt eingeben</div>
+                  <div style={{ display: "grid", gap: "12px" }}>
+                    {dataset.points.map((point, index) => (
+                      <div key={point.id} style={{ display: "grid", gridTemplateColumns: "54px 1fr 54px 1fr", gap: "8px", alignItems: "center" }}>
+                        <span style={{ color: "#8b949e", fontSize: "12px" }}>{`P${index + 1}`}</span>
+                        <label style={{ display: "grid", gap: "4px", fontSize: "12px", color: "#8b949e" }}>
+                          <span>x</span>
+                          <input
+                            type="number"
+                            value={point.x}
+                            step="0.1"
+                            onChange={(e) => updateEditablePointValue(point.id, "x", e.target.value)}
+                            style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid #30363d", backgroundColor: "#0d1117", color: "#e6edf3", fontFamily: "'IBM Plex Mono', monospace", fontSize: "13px" }}
+                          />
+                        </label>
+                        <span style={{ color: "#8b949e", fontSize: "12px" }}>y</span>
+                        <label style={{ display: "grid", gap: "4px", fontSize: "12px", color: "#8b949e" }}>
+                          <input
+                            type="number"
+                            value={point.y}
+                            step="0.1"
+                            onChange={(e) => updateEditablePointValue(point.id, "y", e.target.value)}
+                            style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid #30363d", backgroundColor: "#0d1117", color: "#e6edf3", fontFamily: "'IBM Plex Mono', monospace", fontSize: "13px" }}
+                          />
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
           </div>

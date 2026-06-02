@@ -165,6 +165,22 @@ export default function LossfunctionPage() {
     }));
   }
 
+  function updateEditablePointValue(id, field, value) {
+    const parsed = parseFloat(value);
+    if (Number.isNaN(parsed)) return;
+    const clamped = field === "x" ? clamp(parsed, plotXMin, plotXMax) : clamp(parsed, plotYMin, plotYMax);
+
+    setDatasets((current) => ({
+      ...current,
+      [datasetKey]: {
+        ...current[datasetKey],
+        points: current[datasetKey].points.map((point) =>
+          point.id === id ? { ...point, [field]: clamped } : point
+        ),
+      },
+    }));
+  }
+
   function setLineToOptimal() {
     setSlope(round2(regression.slope));
     setIntercept(round2(regression.intercept));
@@ -173,7 +189,7 @@ export default function LossfunctionPage() {
   return (
     <div style={{ minHeight: "100vh", backgroundColor: "#0d1117", padding: "24px", color: "#e6edf3", fontFamily: "'IBM Plex Mono', monospace" }}>
       <h1 style={{ fontFamily: "'Spectral', serif", fontSize: "clamp(24px, 5vw, 40px)", fontWeight: 600, margin: "0 0 12px", letterSpacing: "-0.02em", color: "#e6edf3" }}>
-          Verlustfunktion
+          Lossfunktion
         </h1>
       <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
         <div style={{ marginBottom: "24px" }}>
@@ -182,15 +198,21 @@ export default function LossfunctionPage() {
             <h2 style={{ fontSize: "18px", fontWeight: "600", color: "#e6edf3", margin: "0 0 10px" }}>Lernaufgaben</h2>
             <ol style={{ margin: 0, paddingLeft: "22px" }}>
               <li style={{ marginBottom: "6px" }}>
-                Lasse dir den Datensatz "Drei Punkte" anzeigen. Versuche wieder eine möglichst gut passende Gerade durch die Punkte zu legen. Beschreibe, wie du dabei vorgehst.
-                <div style={{ color: "#8b949e", fontStyle: "italic", marginTop: "4px" }}>Hinweis: Du kannst in der Simulation den Button "Residuen anzeigen" drücken.</div>
+                Versuche wieder eine möglichst gut passende Gerade durch die Punkte der unterschiedlichen Datensätze zu legen. Beschreibe dieses mal, wie du dabei vorgehst.
+                <div style={{ color: "#8b949e", fontStyle: "italic", marginTop: "4px" }}>Hinweis: Du kannst in der Simulation den Button „Residuen anzeigen" drücken.</div>
               </li>
               <li style={{ marginBottom: "6px" }}>
-                Stelle als Regressionsgerade die Gerade <InlineMath math={String.raw`y = 0{,}5x + 1`} /> und danach die Gerade <InlineMath math={String.raw`y = 0{,}8x + 0{,}5`} /> ein. Beurteile, welche besser passt.
+                Wähle jetzt den Datensatz „3 Punkte" aus. Stelle als Regressionsgerade die Gerade <InlineMath math={String.raw`y = 0{,}5x + 1`} /> und danach die Gerade <InlineMath math={String.raw`y = 0{,}8x + 0{,}5`} /> ein. Beurteile, welche besser passt.
+              </li>
+              <li style={{ marginBottom: "6px" }}>
+                Klicke jetzt auf „Lossfunktion anzeigen". Das ist die Formel, mit der ausgerechnet wird, wie gut die Gerade durch die Punkte gelegt wurde. Erkläre diese Formel mithilfe des Graphen.
               </li>
               <li style={{ marginBottom: "6px" }}>Überlege dir einen Grund, warum die Abstände der Punkte zu der Geraden quadriert werden, anstatt sie einfach zu addieren.</li>
+              <li style={{ marginBottom: "6px" }}>
+                Gehe wieder zum Datensatz „3 Punkte" und stelle nacheinander die beiden oben angegebenen Geraden ein. Berechne jeweils den Loss <InlineMath math={String.raw`L`} /> für beide Geraden, indem du die Abstände der Punkte zu den Geraden am Graphen abliest und in die Formel für <InlineMath math={String.raw`L`} /> einsetzt.
+              </li>
               <li>
-                Verwende jetzt wieder nacheinander jeden angegebenen Datensatz. Versuche wieder, eine möglichst gut passende Gerade durch die Punkte zu legen. Du kannst dir über den Button "Verlust anzeigen" den Verlust deiner Geraden anzeigen lassen und damit deine Gerade bewerten.
+                Berechne den Verlust <InlineMath math={String.raw`L`} /> für beide Geraden, indem du die Formel für <InlineMath math={String.raw`L`} /> direkt für die drei angegebenen Punkte anwendest.
               </li>
             </ol>
           </section>
@@ -299,7 +321,30 @@ export default function LossfunctionPage() {
                 </g>
               ))}
 
-              <g transform={`translate(${SVG_WIDTH - 232}, ${CHART_MARGIN.top + 8})`}>
+              {showLossFormula && datasetKey === "threePoints" &&
+                enrichedPoints.map((point, i) => (
+                  <g key={`pred-${point.id}`}>
+                    <circle
+                      cx={xScale(point.x)}
+                      cy={yScale(point.prediction)}
+                      r="5"
+                      fill="none"
+                      stroke="#3fb950"
+                      strokeWidth="2"
+                    />
+                    <text
+                      x={xScale(point.x) - 15}
+                      y={yScale(point.prediction) - 8}
+                      fill="#3fb950"
+                      fontSize="12"
+                      fontFamily="'IBM Plex Mono', monospace"
+                    >
+                      {`ŷ${toSubscript(i + 1)}`}
+                    </text>
+                  </g>
+                ))}
+
+              {/* <g transform={`translate(${SVG_WIDTH - 232}, ${CHART_MARGIN.top + 8})`}>
                 <rect width="206" height={showOptimalLine ? "78" : "50"} rx="12" fill="#161b22" stroke="rgba(48, 54, 61, 0.45)" strokeWidth="1" />
                 <line x1="16" y1="22" x2="50" y2="22" stroke="#1f6feb" strokeWidth="4" strokeLinecap="round" />
                 <text x="60" y="27" fill="#8b949e" fontSize="12">deine Gerade</text>
@@ -309,14 +354,14 @@ export default function LossfunctionPage() {
                     <text x="60" y="55" fill="#8b949e" fontSize="12">optimale Regression</text>
                   </>
                 )}
-              </g>
+              </g> */}
             </svg>
             <div style={{ marginTop: "24px", border: "1px solid #30363d", borderRadius: "8px", padding: "16px", backgroundColor: "#161b22" }}>
               <div style={{ fontSize: "16px", fontWeight: "600", marginBottom: "16px" }}>Werte</div>
 
               <div style={{ backgroundColor: "#1f3a5f", padding: "16px", borderRadius: "8px", marginBottom: "12px" }}>
-                <div style={{ fontSize: "12px", color: "#79c0ff", marginBottom: "4px" }}>Deine Gerade</div>
-                <div style={{ fontFamily: "monospace", fontSize: "18px", fontWeight: "bold", color: "#e6edf3" }}>ŷ = {slope.toFixed(2)}x {intercept >= 0 ? "+" : "−"} {Math.abs(intercept).toFixed(2)}</div>
+                {/* <div style={{ fontSize: "12px", color: "#79c0ff", marginBottom: "4px" }}>Deine Gerade</div>
+                <div style={{ fontFamily: "monospace", fontSize: "18px", fontWeight: "bold", color: "#e6edf3" }}>ŷ = {slope.toFixed(2)}x {intercept >= 0 ? "+" : "−"} {Math.abs(intercept).toFixed(2)}</div> */}
               </div>
 
               {showLoss && (
@@ -324,11 +369,11 @@ export default function LossfunctionPage() {
                   <div style={{ fontSize: "12px", color: "#f85149", marginBottom: "8px" }}>Loss deiner Gerade</div>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                     <div>
-                      <div style={{ fontSize: "11px", color: "#f85149" }}>SSE deiner Gerade</div>
+                      <div style={{ fontSize: "11px", color: "#f85149" }}>Loss L deiner Gerade</div>
                       <div style={{ fontFamily: "monospace", fontSize: "20px", fontWeight: "bold", color: "#e6edf3" }}>{sseValue.toFixed(3)}</div>
                     </div>
                     <div>
-                      <div style={{ fontSize: "11px", color: "#3fb950" }}>SSE optimale Gerade</div>
+                      <div style={{ fontSize: "11px", color: "#3fb950" }}>Loss L optimale Gerade</div>
                       <div style={{ fontFamily: "monospace", fontSize: "20px", fontWeight: "bold", color: "#e6edf3" }}>{regressionSseValue.toFixed(3)}</div>
                     </div>
                   </div>
@@ -407,7 +452,7 @@ export default function LossfunctionPage() {
                   <input type="checkbox" checked={showLine} onChange={(e) => setShowLine(e.target.checked)} style={{ cursor: "pointer" }} />
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", backgroundColor: "#0d1117", padding: "12px", borderRadius: "6px", fontSize: "13px" }}>
-                  <span>Residuen anzeigen</span>
+                  <span>Abweichungen anzeigen</span>
                   <input type="checkbox" checked={showResiduals} onChange={(e) => setShowResiduals(e.target.checked)} style={{ cursor: "pointer" }} />
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", backgroundColor: "#0d1117", padding: "12px", borderRadius: "6px", fontSize: "13px" }}>
@@ -426,6 +471,39 @@ export default function LossfunctionPage() {
                   <button onClick={resetEditableDataset} style={{ padding: "10px 16px", backgroundColor: "transparent", color: "#1f6feb", border: "1px solid #1f6feb", borderRadius: "6px", cursor: "pointer", fontSize: "13px", fontWeight: "600" }}>↻ Punkte zurücksetzen</button>
                 )}
               </div>
+
+              {dataset.editable && (
+                <div style={{ marginTop: "18px", padding: "16px", borderRadius: "8px", border: "1px solid #30363d", backgroundColor: "#0d1117" }}>
+                  <div style={{ fontSize: "14px", fontWeight: "600", marginBottom: "12px" }}>Datenpunkte direkt eingeben</div>
+                  <div style={{ display: "grid", gap: "12px" }}>
+                    {dataset.points.map((point, index) => (
+                      <div key={point.id} style={{ display: "grid", gridTemplateColumns: "54px 1fr 54px 1fr", gap: "8px", alignItems: "center" }}>
+                        <span style={{ color: "#8b949e", fontSize: "12px" }}>{`P${index + 1}`}</span>
+                        <label style={{ display: "grid", gap: "4px", fontSize: "12px", color: "#8b949e" }}>
+                          <span>x</span>
+                          <input
+                            type="number"
+                            value={point.x}
+                            step="0.1"
+                            onChange={(e) => updateEditablePointValue(point.id, "x", e.target.value)}
+                            style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid #30363d", backgroundColor: "#0d1117", color: "#e6edf3", fontFamily: "'IBM Plex Mono', monospace", fontSize: "13px" }}
+                          />
+                        </label>
+                        <span style={{ color: "#8b949e", fontSize: "12px" }}>y</span>
+                        <label style={{ display: "grid", gap: "4px", fontSize: "12px", color: "#8b949e" }}>
+                          <input
+                            type="number"
+                            value={point.y}
+                            step="0.1"
+                            onChange={(e) => updateEditablePointValue(point.id, "y", e.target.value)}
+                            style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid #30363d", backgroundColor: "#0d1117", color: "#e6edf3", fontFamily: "'IBM Plex Mono', monospace", fontSize: "13px" }}
+                          />
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
           </div>

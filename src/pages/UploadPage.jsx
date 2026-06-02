@@ -216,10 +216,10 @@ export default function UploadPage() {
   const yTicks = useMemo(() => createTicks(yMin, yMax), [yMin, yMax]);
 
   const dataSlope = points.length > 1 ? (yMax - yMin) / Math.max(1e-9, xMax - xMin) : 1;
-  const slopeRange = Math.max(1, Math.abs(dataSlope) * 2, Math.abs(regression.slope) * 2);
-  const slopeMin = -slopeRange;
-  const slopeMax = slopeRange;
-  const interceptSpan = Math.max(yMax - yMin, Math.abs(regression.intercept), 1) * 1.5;
+  const slopeSpan = Math.max(1, Math.abs(dataSlope), Math.abs(regression.slope)) * 1.3;
+  const slopeMin = regression.slope - slopeSpan;
+  const slopeMax = regression.slope + slopeSpan;
+  const interceptSpan = Math.max(yMax - yMin, 1) * 0.9;
   const interceptMin = regression.intercept - interceptSpan;
   const interceptMax = regression.intercept + interceptSpan;
 
@@ -372,7 +372,7 @@ export default function UploadPage() {
                   <circle key={`point-${point.id}-${index}`} cx={xScale(point.x)} cy={yScale(point.y)} r={pointRadius} fill="#e6edf3" stroke="#0d1117" strokeWidth="1.5" opacity="0.72" />
                 ))}
 
-                <g transform={`translate(${SVG_WIDTH - 232}, ${CHART_MARGIN.top + 8})`}>
+                {/* <g transform={`translate(${SVG_WIDTH - 232}, ${CHART_MARGIN.top + 8})`}>
                   <rect width="206" height={showOptimalLine ? "78" : "50"} rx="12" fill="#161b22" stroke="rgba(48, 54, 61, 0.45)" strokeWidth="1" />
                   <line x1="16" y1="22" x2="50" y2="22" stroke="#1f6feb" strokeWidth="4" strokeLinecap="round" />
                   <text x="60" y="27" fill="#8b949e" fontSize="12">deine Gerade</text>
@@ -382,7 +382,7 @@ export default function UploadPage() {
                       <text x="60" y="55" fill="#8b949e" fontSize="12">optimale Regression</text>
                     </>
                   )}
-                </g>
+                </g> */}
               </svg>
 
               <div style={{ marginTop: "24px", border: "1px solid #30363d", borderRadius: "8px", padding: "16px", backgroundColor: "#161b22" }}>
@@ -427,7 +427,7 @@ export default function UploadPage() {
                     <label>Steigung m</label>
                     <span style={{ backgroundColor: "#21262d", padding: "4px 12px", borderRadius: "12px", fontSize: "12px" }}>{formatNumber(activeSlope)}</span>
                   </div>
-                  <input type="range" min={slopeMin} max={slopeMax} step={(slopeMax - slopeMin) / 1000 || 0.01} value={activeSlope} onChange={(event) => setSlope(parseFloat(event.target.value))} style={{ width: "100%" }} />
+                  <input type="range" min={slopeMin} max={slopeMax} step={Math.max((slopeMax - slopeMin) / 4000, 0.0005)} value={activeSlope} onChange={(event) => setSlope(parseFloat(event.target.value))} style={{ width: "100%" }} />
                 </div>
 
                 <div style={{ marginBottom: "16px" }}>
@@ -435,7 +435,7 @@ export default function UploadPage() {
                     <label>y-Achsenabschnitt b</label>
                     <span style={{ backgroundColor: "#21262d", padding: "4px 12px", borderRadius: "12px", fontSize: "12px" }}>{formatNumber(activeIntercept)}</span>
                   </div>
-                  <input type="range" min={interceptMin} max={interceptMax} step={(interceptMax - interceptMin) / 1000 || 0.01} value={activeIntercept} onChange={(event) => setIntercept(parseFloat(event.target.value))} style={{ width: "100%" }} />
+                  <input type="range" min={interceptMin} max={interceptMax} step={Math.max((interceptMax - interceptMin) / 4000, 0.005)} value={activeIntercept} onChange={(event) => setIntercept(parseFloat(event.target.value))} style={{ width: "100%" }} />
                 </div>
 
                 <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginBottom: "16px" }}>

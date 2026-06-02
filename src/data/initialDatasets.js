@@ -1,6 +1,6 @@
 export const INITIAL_DATASETS = {
   heightShoeSize: {
-    label: "Körpergröße zu Schuhgröße",
+    label: "(1) Körpergröße zu Schuhgröße",
     editable: false,
     xLabel: "Körpergröße (cm)",
     yLabel: "Schuhgröße",
@@ -17,7 +17,7 @@ export const INITIAL_DATASETS = {
     ],
   },
   studyTimeGrade: {
-    label: "Lerndauer zur Schulnote",
+    label: "(2) Lerndauer zur Schulnote",
     editable: false,
     xLabel: "Lerndauer (h)",
     yLabel: "Note",
@@ -34,7 +34,7 @@ export const INITIAL_DATASETS = {
     ],
   },
   iceCreamSunglasses: {
-    label: "Eisverkäufe zu Sonnenbrillenverkäufen",
+    label: "(3) Eisverkäufe zu Sonnenbrillenverkäufen",
     editable: false,
     xLabel: "Eisverkäufe",
     yLabel: "Sonnenbrillen",
@@ -51,7 +51,7 @@ export const INITIAL_DATASETS = {
     ],
   },
   bacteriaGrowth: {
-    label: "Zeit zu Bakterienanzahl",
+    label: "(4) Zeit zu Bakterienanzahl",
     editable: false,
     xLabel: "Zeit (Tage)",
     yLabel: "Bakterienanzahl",
@@ -68,7 +68,7 @@ export const INITIAL_DATASETS = {
     ],
   },
   stressPerformance: {
-    label: "Stress und Leistung (Yerkes-Dodson)",
+    label: "(5) Stress und Leistung (Yerkes-Dodson)",
     editable: false,
     xLabel: "Stresslevel (0–10)",
     yLabel: "Leistung (%)",

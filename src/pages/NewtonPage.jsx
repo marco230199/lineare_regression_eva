@@ -10,7 +10,7 @@ const EXAMPLES = [
   { label: "eˣ − 3", fn: "exp(x) - 3" },
 ];
 
-const STEP_LABELS = ["Show Tangent", "Show Zero of Tangent", "Move to Next Point"];
+const STEP_LABELS = ["Tangente durch Punkt P anlegen", "Nullstelle der Tangente bestimmen", "Nullstelle als neuen Startwert verwenden"];
 
 function InlineMath({ math }) {
   return (
@@ -25,23 +25,53 @@ function InlineMath({ math }) {
   );
 }
 
+function BlockMath({ math }) {
+  return (
+    <div
+      dangerouslySetInnerHTML={{
+        __html: katex.renderToString(math, {
+          displayMode: true,
+          throwOnError: false,
+        }),
+      }}
+      style={{ margin: "12px 0", padding: "8px 0" }}
+    />
+  );
+}
+
+function normalizeExpr(expr) {
+  return expr
+    .replace(/−/g, "-")
+    .replace(/,/g, ".")
+    .replace(/\^/g, "**")
+    .replace(/π/g, "pi")
+    .replace(/\barcsin\b/g, "asin")
+    .replace(/\barccos\b/g, "acos")
+    .replace(/\barctan\b/g, "atan")
+    .replace(/(\d|\)|pi|e)x\b/g, "$1*x")
+    .replace(/x(\d|pi|e|\()/g, "x*$1")
+    .replace(/(\d|x|\)|pi|e)\s*\(/g, "$1*(");
+}
+
 function evalFn(expr, x) {
   try {
-    const cleaned = expr
-      .replace(/\^/g, "**")
-      .replace(/(\d)(x)/g, "$1*x")
-      .replace(/([a-zA-Z])\(/g, "Math.$1(")
-      .replace(/\bsin\b/g, "Math.sin")
-      .replace(/\bcos\b/g, "Math.cos")
-      .replace(/\btan\b/g, "Math.tan")
-      .replace(/\bsqrt\b/g, "Math.sqrt")
-      .replace(/\babs\b/g, "Math.abs")
-      .replace(/\bln\b/g, "Math.log")
-      .replace(/\blog\b/g, "Math.log10")
-      .replace(/\bexp\b/g, "Math.exp")
-      .replace(/\bpi\b/g, "Math.PI")
-      .replace(/\be\b/g, "Math.E");
-    return Function("x", `"use strict"; return (${cleaned})`)(x);
+    const cleaned = normalizeExpr(expr);
+    const allowedNames = [
+      "sin", "cos", "tan", "asin", "acos", "atan",
+      "sqrt", "abs", "ln", "log", "exp", "pow",
+      "floor", "ceil", "round", "min", "max"
+    ];
+    const allowedValues = allowedNames.map((name) =>
+      name === "ln" ? Math.log : name === "log" ? Math.log10 : Math[name]
+    );
+
+    return Function(
+      "x",
+      "pi",
+      "e",
+      ...allowedNames,
+      `"use strict"; return (${cleaned})`
+    )(x, Math.PI, Math.E, ...allowedValues);
   } catch {
     return NaN;
   }
@@ -84,6 +114,10 @@ export default function NewtonPage() {
   const [view, setView] = useState(DEFAULT_VIEW);
   const [dragging, setDragging] = useState(null);
   const [animating, setAnimating] = useState(false);
+  const [autoRun, setAutoRun] = useState(false);
+  const [showStepLabels, setShowStepLabels] = useState(false);
+  const [showCalculation, setShowCalculation] = useState(false);
+  const [showDerivation, setShowDerivation] = useState(false);
   const maxIter = 12;
 
   const buildIterations = useCallback((expr, x0) => {
@@ -107,6 +141,7 @@ export default function NewtonPage() {
     const test = evalFn(fnExpr, x0);
     if (isNaN(test)) { setFnError(true); return; }
     setFnError(false);
+    setAutoRun(false);
     const iters = buildIterations(fnExpr, x0);
     setIterations(iters);
     setIterIndex(0);
@@ -122,11 +157,26 @@ export default function NewtonPage() {
       if (iterIndex + 1 < iterations.length) {
         setIterIndex((i) => i + 1);
         setSubStep(0);
+      } else {
+        setAutoRun(false);
       }
     }
   }, [subStep, iterIndex, iterations]);
 
   const isConverged = iterations.length > 0 && iterIndex >= iterations.length - 1 && subStep === 3;
+  const canStep = iterations.length > 0 && !(isConverged && subStep === 3);
+
+  useEffect(() => {
+    if (!autoRun || !canStep || animating) return;
+    const timer = setTimeout(() => {
+      handleStep();
+    }, 900);
+    return () => clearTimeout(timer);
+  }, [autoRun, canStep, animating, handleStep]);
+
+  useEffect(() => {
+    if (isConverged) setAutoRun(false);
+  }, [isConverged]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -204,28 +254,53 @@ export default function NewtonPage() {
     const it = iterations[iterIndex];
     if (!it) return;
 
-    drawPoint(ctx, tc, it.x, it.fx, "#f59e0b", 7, "x" + iterIndex);
+    if (subStep === 0) {
+      // drawPoint(ctx, tc, it.x, it.fx, "#f59e0b", 7, pointLabel(iterIndex, it.x, it.fx));
+      drawPoint(ctx, tc, it.x, it.fx, "#f59e0b", 7, pointLabel(iterIndex));
+
+    }
 
     if (subStep >= 1) {
       drawTangentLine(ctx, tc, it, "#f59e0b", 2, true);
     }
     if (subStep >= 2) {
-      drawPoint(ctx, tc, it.xNext, 0, "#22c55e", 7, "x" + (iterIndex + 1));
+      drawPoint(ctx, tc, it.xNext, 0, "#22c55e", 7, `x${iterIndex + 1}`);
       drawDashedVertical(ctx, tc, it.xNext, 0, "#22c55e60");
+    }
+    if (showCalculation && subStep >= 2) {
+      drawCalculationBox(ctx, it, iterIndex, w);
     }
     if (subStep >= 3) {
       const yNext = evalFn(fnExpr, it.xNext);
       if (isFinite(yNext)) {
-        drawVertical(ctx, tc, it.xNext, yNext, "#22c55e", 1.5);
-        drawPoint(ctx, tc, it.xNext, yNext, "#22c55e", 7, "x" + (iterIndex + 1));
-        const [cx, cy] = tc(it.xNext, yNext);
-        ctx.fillStyle = "#22c55e";
-        ctx.font = "bold 12px 'JetBrains Mono', monospace";
-        ctx.textAlign = "left";
-        ctx.fillText(`x = ${it.xNext.toFixed(5)}`, cx + 10, cy - 8);
+        drawVertical(ctx, tc, it.xNext, yNext, "#22c55e", 1.5, `f(x${toSubscript(iterIndex + 1)})`);
       }
     }
-  }, [fnExpr, iterations, iterIndex, subStep, view]);
+  }, [fnExpr, iterations, iterIndex, subStep, view, showCalculation]);
+
+  // function pointLabel(n, x, y) {
+  //   return `P${n}(${x.toFixed(3)} | ${y.toFixed(3)})`;
+  // }
+  function pointLabel(n) {
+    return `P${n}`;
+  }
+
+  function toSubscript(value) {
+    const subscripts = {
+      "0": "₀",
+      "1": "₁",
+      "2": "₂",
+      "3": "₃",
+      "4": "₄",
+      "5": "₅",
+      "6": "₆",
+      "7": "₇",
+      "8": "₈",
+      "9": "₉",
+      "-": "₋",
+    };
+    return String(value).replace(/[0-9-]/g, (char) => subscripts[char] ?? char);
+  }
 
   function drawTangentLine(ctx, tc, it, color, lw, glow = false) {
     const extend = (view.xMax - view.xMin) * 1.5;
@@ -242,12 +317,20 @@ export default function NewtonPage() {
     ctx.shadowBlur = 0;
   }
 
-  function drawVertical(ctx, tc, x, yTop, color, lw) {
+  function drawVertical(ctx, tc, x, yTop, color, lw, label) {
     const [cx1, cy1] = tc(x, 0);
     const [cx2, cy2] = tc(x, yTop);
     ctx.strokeStyle = color;
     ctx.lineWidth = lw;
     ctx.beginPath(); ctx.moveTo(cx1, cy1); ctx.lineTo(cx2, cy2); ctx.stroke();
+
+    if (label) {
+      const labelY = yTop >= 0 ? Math.min(cy1, cy2) - 8 : Math.max(cy1, cy2) + 16;
+      ctx.fillStyle = color;
+      ctx.font = "bold 12px 'JetBrains Mono', monospace";
+      ctx.textAlign = "left";
+      ctx.fillText(label, cx2 + 10, labelY);
+    }
   }
 
   function drawDashedVertical(ctx, tc, x, y, color) {
@@ -271,8 +354,39 @@ export default function NewtonPage() {
       ctx.fillStyle = color;
       ctx.font = "bold 13px 'JetBrains Mono', monospace";
       ctx.textAlign = "center";
-      ctx.fillText(label, cx, cy - 12);
+      ctx.fillText(label, cx, cy - 14);
     }
+  }
+
+  function drawCalculationBox(ctx, it, n, canvasWidth) {
+    const xNext = it.x - it.fx / it.fpx;
+
+    const lines = [
+      `x${n + 1} = x${n} - f(x${n}) / f'(x${n})`,
+      `x${n + 1} = ${it.x.toFixed(3)} - ${it.fx.toFixed(3)} / ${it.fpx.toFixed(3)}`,
+      `x${n + 1} ≈ ${xNext.toFixed(6)}`
+    ];
+
+    const boxX = 20;
+    const boxY = 55;
+    const boxW = Math.min(420, canvasWidth - 40);
+    const boxH = 82;
+
+    ctx.fillStyle = "#161b22dd";
+    ctx.strokeStyle = "#38bdf880";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(boxX, boxY, boxW, boxH, 8);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = "#e6edf3";
+    ctx.font = "12px 'JetBrains Mono', monospace";
+    ctx.textAlign = "left";
+
+    lines.forEach((line, i) => {
+      ctx.fillText(line, boxX + 14, boxY + 24 + i * 20);
+    });
   }
 
   const handleWheel = useCallback((e) => {
@@ -324,20 +438,23 @@ export default function NewtonPage() {
 
   const handleFnChange = (val) => {
     setRawInput(val);
-    const test = evalFn(val, 1);
-    setFnError(isNaN(test) && val.trim() !== "");
-    if (!isNaN(test) || val.trim() === "") setFnExpr(val);
+    const testPoints = [1, 2, Math.E, -1, 0.5];
+    const isValid = val.trim() === "" || testPoints.some((testX) => isFinite(evalFn(val, testX)));
+    setFnError(!isValid);
+    if (isValid) setFnExpr(val);
   };
 
-  const stepLabel = subStep < 3
-    ? STEP_LABELS[subStep]
-    : iterIndex + 1 < iterations.length
-      ? "Next Iteration →"
-      : "Converged ✓";
+ const detailedStepLabel = subStep < 3
+  ? STEP_LABELS[subStep]
+  : iterIndex + 1 < iterations.length
+    ? "Nächster Durchgang →"
+    : "Converged ✓";
+
+  const stepLabel = showStepLabels
+    ? detailedStepLabel
+    : (isConverged ? "Converged ✓" : "Nächster Schritt");
 
   const currentIter = iterations[iterIndex];
-  const canStep = iterations.length > 0 && !(isConverged && subStep === 3);
-
   return (
     <div style={{
       minHeight: "100vh",
@@ -417,32 +534,56 @@ export default function NewtonPage() {
         .iter-row.done { border-left-color: #22c55e30; }
       `}</style>
 
-      <div style={{ marginBottom: 28, maxWidth: 900, width: "100%", textAlign: "left" }}>
-        <h1 style={{ fontFamily: "'Spectral', serif", fontSize: "clamp(24px, 5vw, 40px)", fontWeight: 600, margin: "0 0 12px", letterSpacing: "-0.02em", color: "#e6edf3" }}>
-          Newtonverfahren
-        </h1>
-        <div style={{ color: "#c9d1d9", lineHeight: 1.55, fontSize: 14 }}>
-          <p style={{ marginBottom: 10 }}>
-            In der Realität weisen die Datenpunkte häufig keinen linearen Zusammenhang auf, sondern Zusammenhänge komplexerer Funktionen. Hier wird die Verlustfunktion noch immer mit der gleichen Idee berechnet, allerdings ist die Verlustfunktion dann nicht mehr quadratisch, sondern komplexer. Für diese Funktionen das Minimum zu bestimmen, kann sehr umständlich oder sogar unmöglich sein.
-          </p>
-          <p style={{ marginBottom: 16 }}>
-            In solchen Situationen verwendet man sogenannte Näherungsverfahren. Eines davon ist das <strong>Newtonverfahren</strong>.
-          </p>
-          <h2 style={{ fontSize: "18px", fontWeight: "600", color: "#e6edf3", margin: "0 0 10px" }}>Lernaufgaben</h2>
-          <ol style={{ margin: 0, paddingLeft: "22px" }}>
-            <li style={{ marginBottom: "6px" }}>
-              Berechne die Extremstellen der Funktion <InlineMath math={String.raw`f(x) = x^4 - 6x^3 + 9x^2 + 15x`} />. Was fällt dir auf?
-            </li>
-            <li style={{ marginBottom: "6px" }}>
-              Das Newtonverfahren ist ein Verfahren, um näherungsweise die Nullstellen einer Funktion zu bestimmen. Für Aufgabe a) brauchst du die Nullstellen von <InlineMath math={String.raw`f'(x)`} />. Klicke dich durch die Simulation und erkläre, wie das Newtonverfahren funktioniert.
-            </li>
-            <li style={{ marginBottom: "6px" }}>Berechne die Nullstellen von <InlineMath math={String.raw`f'(x)`} /> mit dem Newtonverfahren.</li>
-            <li>
-              Mithilfe des Startbuttons kannst du das Newtonverfahren laufen lassen. Beobachte für unterschiedliche Funktionen und Startwerte <InlineMath math={String.raw`x_0`} />. Beschreibe, wann das Newtonverfahren nicht funktioniert.
-            </li>
-          </ol>
-        </div>
+     <div style={{ marginBottom: 28, maxWidth: 900, width: "100%", textAlign: "left" }}>
+  <h1 style={{ fontFamily: "'Spectral', serif", fontSize: "clamp(24px, 5vw, 40px)", fontWeight: 600, margin: "0 0 12px", letterSpacing: "-0.02em", color: "#e6edf3" }}>
+    Newtonverfahren
+  </h1>
+
+    <div style={{ color: "#c9d1d9", lineHeight: 1.55, fontSize: 14 }}>
+        <p style={{ marginBottom: 10 }}>
+          Du hast gelernt, dass Computer Regressionsgeraden durch das Minimieren der Lossfunktion bestimmen können, auch wenn es sich um sehr große Datenmengen handelt.
+        </p>
+
+        <p style={{ marginBottom: 10 }}>
+          Es gibt jedoch auch Szenarien, in denen es schwieriger ist, die Lossfunktion zu minimieren.
+        </p>
+
+        <p style={{ marginBottom: 16 }}>
+          Hier kommen dann Näherungsverfahren zum Einsatz. Eines dieser Verfahren ist das <strong>Newtonverfahren</strong>. Es ermöglicht es, die Nullstellen einer Funktion zu bestimmen.
+        </p>
+
+        <h2 style={{ fontSize: "18px", fontWeight: "600", color: "#e6edf3", margin: "0 0 10px" }}>
+          Lernaufgaben
+        </h2>
+
+        <ol style={{ margin: 0, paddingLeft: "22px" }}>
+          <li style={{ marginBottom: "6px" }}>
+            Berechne die Nullstellen der Funktion <InlineMath math={String.raw`f(x) = \frac{1}{3}x^3 - x^2 - \frac{1}{3}`} />. Was fällt dir auf?
+          </li>
+
+          <li style={{ marginBottom: "6px" }}>
+            Mache dich jetzt mit der Simulation zum Newtonverfahren vertraut. Wähle zunächst die Funktion <InlineMath math={String.raw`f(x) = 3\ln(x)-5`} /> mit dem Startwert <InlineMath math={String.raw`x_0 = 0.2`} /> aus. Klicke dich mithilfe des Buttons „Nächster Schritt“ langsam durch die Simulation und beschreibe in Schritten, wie das Newtonverfahren funktioniert. Du kannst dein Ergebnis mithilfe des Buttons „Schritte benennen“ überprüfen.
+          </li>
+
+          <li style={{ marginBottom: "6px" }}>
+            Zeichne in den abgebildeten Graphen die ersten drei Durchgänge des Newtonverfahrens ein.
+          </li>
+
+          <li style={{ marginBottom: "6px" }}>
+            Verwende jetzt die Funktion <InlineMath math={String.raw`f(x) = x^3 - 2x + 2`} /> und starte das Newtonverfahren mit unterschiedlichen Startwerten <InlineMath math={String.raw`x_0`} />. Findet das Verfahren immer die Nullstellen der Funktion?
+          </li>
+
+          <li>
+            Der Button "Herleitung der Iterationsformel" zeigt, wie die vier Schritte rechnerisch durchgeührt werden. Dies führt zur sogenannten 
+            Iterationsformel des Newtonverfahrens. 
+          </li>
+          <li style={{ marginBottom: "6px" }}>
+          Wende das Newtonverfahren zweimal an, um die Nullstellen der Funktion <InlineMath math={String.raw`f(x) = \frac{1}{3}x^3 - x^2 - \frac{1}{3}`} /> anzunähern. Du kannst den Button „Rechnung anzeigen“ oder die Tabelle unterhalb des Graphen verwenden, 
+          um deine Ergebnisse schrittweise zu überprüfen. Wähle als Startwert <InlineMath math={String.raw`x_0 = 2,5`} /> .
+          </li>
+        </ol>
       </div>
+    </div>
 
       <div style={{ display: "flex", gap: 20, width: "100%", maxWidth: 1100, flexWrap: "wrap", alignItems: "flex-start" }}>
 
@@ -468,7 +609,7 @@ export default function NewtonPage() {
           </div>
 
           <div style={{ background: "#161b22", border: "1px solid #2d3f55", borderRadius: 10, padding: 16 }}>
-            <div style={{ fontSize: 11, letterSpacing: "0.15em", color: "#4a6080", marginBottom: 10, textTransform: "uppercase" }}>Starting Point x₀</div>
+            <div style={{ fontSize: 11, letterSpacing: "0.15em", color: "#4a6080", marginBottom: 10, textTransform: "uppercase" }}>1. Schritt: Startwert x₀ auswählen</div>
             <input
               type="number"
               step="0.1"
@@ -480,8 +621,9 @@ export default function NewtonPage() {
 
           <div style={{ background: "#161b22", border: "1px solid #2d3f55", borderRadius: 10, padding: 16 }}>
             <button className="reset-btn" style={{ width: "100%", marginBottom: 10 }} onClick={handleReset}>
-              ↺ Reset / Apply
+              ↺ Startwert verwenden / Zurücksetzen
             </button>
+           
             <button
               className="step-btn"
               style={{ width: "100%" }}
@@ -489,6 +631,49 @@ export default function NewtonPage() {
               disabled={!canStep || animating}
             >
               {isConverged ? "Converged ✓" : stepLabel}
+            </button>
+            <button
+              className="step-btn"
+              style={{ width: "100%", marginTop: 10, background: autoRun ? "linear-gradient(135deg, #5f1e1e, #7a1a1a)" : undefined }}
+              onClick={() => setAutoRun((running) => !running)}
+              disabled={!canStep && !autoRun}
+            >
+              {autoRun ? "⏸ STOP" : "▶ START"}
+            </button>
+             <button
+                className="reset-btn"
+                style={{
+                  width: "100%",
+                  marginBottom: 10,
+                  borderColor: showStepLabels ? "#38bdf8" : undefined,
+                  color: showStepLabels ? "#38bdf8" : undefined
+                }}
+                onClick={() => setShowStepLabels((v) => !v)}
+              >
+                {showStepLabels ? "✓ Schritte benennen" : "Schritte benennen"}
+            </button>
+            <button
+              className="reset-btn"
+              style={{
+                width: "100%",
+                marginBottom: 10,
+                borderColor: showCalculation ? "#38bdf8" : undefined,
+                color: showCalculation ? "#38bdf8" : undefined
+              }}
+              onClick={() => setShowCalculation((v) => !v)}
+            >
+              {showCalculation ? "✓ Rechnung anzeigen" : "Rechnung anzeigen"}
+            </button>
+            <button
+              className="reset-btn"
+              style={{
+                width: "100%",
+                borderColor: showDerivation ? "#38bdf8" : undefined,
+                color: showDerivation ? "#38bdf8" : undefined
+              }}
+              onClick={() => setShowDerivation((v) => !v)}
+            >
+              {showDerivation ? "✓ Herleitung der Iterationsformel" : "Herleitung der Iterationsformel"}
             </button>
           </div>
 
@@ -561,6 +746,79 @@ export default function NewtonPage() {
           )}
         </div>
       </div>
+
+      {showDerivation && (
+        <div style={{ marginTop: 40, maxWidth: 900, width: "100%", textAlign: "left" }}>
+          <h2 style={{ fontFamily: "'Spectral', serif", fontSize: "clamp(20px, 4vw, 32px)", fontWeight: 600, margin: "0 0 20px", letterSpacing: "-0.02em", color: "#e6edf3" }}>
+            Herleitung der Iterationsformel des Newtonverfahrens
+          </h2>
+
+          <div style={{ background: "#161b22", border: "1px solid #2d3f55", borderRadius: 10, padding: 20, color: "#c9d1d9", lineHeight: 1.65 }}>
+            <div style={{ marginBottom: 24 }}>
+              <h3 style={{ fontSize: "16px", fontWeight: 600, color: "#e6edf3", margin: "0 0 12px" }}>
+                1. Schritt: Startwert wählen und Punkt P bestimmen
+              </h3>
+              <p style={{ margin: 0, marginBottom: 10 }}>
+                Wähle einen Startwert <InlineMath math={String.raw`x_0`} /> auf der x-Achse und damit einen Punkt P <InlineMath math={String.raw`(x_0 | f(x_0))`} /> auf dem Graphen <InlineMath math={String.raw`G_f`} />.
+              </p>
+            </div>
+
+            <div style={{ marginBottom: 24 }}>
+              <h3 style={{ fontSize: "16px", fontWeight: 600, color: "#e6edf3", margin: "0 0 12px" }}>
+                2. Schritt: Tangentengleichung durch diesen Punkt bestimmen
+              </h3>
+              <BlockMath math={String.raw`T: y = mx + t`} />
+              <BlockMath math={String.raw`m = f'(x_0)`} />
+              <p style={{ margin: 0, marginBottom: 10 }}>
+                Punkt P liegt auf der Tangente, daher:
+              </p>
+              <BlockMath math={String.raw`\begin{align*}
+                y &= mx + t \\
+                f(x_0) &= f'(x_0) \cdot x_0 + t \\
+                t &= f(x_0) - f'(x_0) \cdot x_0
+              \end{align*}`} />
+              <p style={{ margin: 0, marginBottom: 10 }}>
+                Die Tangentengleichung ist:
+              </p>
+              <BlockMath math={String.raw`\begin{align*}
+                T: y &= f'(x_0) \cdot x + f(x_0) - f'(x_0) \cdot x_0 \\
+                &= f'(x_0) \cdot (x - x_0) + f(x_0)
+              \end{align*}`} />
+            </div>
+
+            <div style={{ marginBottom: 24 }}>
+              <h3 style={{ fontSize: "16px", fontWeight: 600, color: "#e6edf3", margin: "0 0 12px" }}>
+                3. Schritt: Schnittpunkt der Tangente mit der x-Achse bestimmen
+              </h3>
+              <p style={{ margin: 0, marginBottom: 10 }}>
+                Setze <InlineMath math={String.raw`y = 0`} />:
+              </p>
+              <BlockMath math={String.raw`\begin{align*}
+                0 &= f'(x_0) \cdot (x - x_0) + f(x_0) \\
+                -f(x_0) &= f'(x_0) \cdot (x - x_0) \\
+                -\frac{f(x_0)}{f'(x_0)} &= x - x_0 \\
+                x &= x_0 - \frac{f(x_0)}{f'(x_0)}
+              \end{align*}`} />
+            </div>
+
+            <div style={{ marginBottom: 24 }}>
+              <h3 style={{ fontSize: "16px", fontWeight: 600, color: "#e6edf3", margin: "0 0 12px" }}>
+                4. Schritt: Wiederholen
+              </h3>
+              <p style={{ margin: 0, marginBottom: 10 }}>
+                Wiederhole die Schritte mit dem nächsten Wert <InlineMath math={String.raw`x_1`} />, bis sich die Ergebnisse kaum noch ändern.
+              </p>
+            </div>
+
+            <div style={{ background: "#0d1117", border: "2px solid #38bdf8", borderRadius: 8, padding: 16, marginTop: 20 }}>
+              <p style={{ margin: 0, marginBottom: 8, color: "#38bdf8", fontWeight: 600 }}>
+                📌 Iterative Formel des Newtonverfahrens:
+              </p>
+              <BlockMath math={String.raw`x_{n+1} = x_n - \frac{f(x_n)}{f'(x_n)}`} />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -112,6 +112,22 @@ export default function LineareRegressionPage() {
     }));
   }
 
+  function updateEditablePointValue(id, field, value) {
+    const parsed = parseFloat(value);
+    if (Number.isNaN(parsed)) return;
+    const clamped = field === "x" ? clamp(parsed, plotXMin, plotXMax) : clamp(parsed, plotYMin, plotYMax);
+
+    setDatasets((current) => ({
+      ...current,
+      [datasetKey]: {
+        ...current[datasetKey],
+        points: current[datasetKey].points.map((point) =>
+          point.id === id ? { ...point, [field]: clamped } : point
+        ),
+      },
+    }));
+  }
+
   return (
     <div style={{ minHeight: "100vh", backgroundColor: "#0d1117", padding: "24px", color: "#e6edf3", fontFamily: "'IBM Plex Mono', monospace" }}>
         <h1 style={{ fontFamily: "'Spectral', serif", fontSize: "clamp(24px, 5vw, 40px)", fontWeight: 600, margin: "0 0 12px", letterSpacing: "-0.02em", color: "#e6edf3" }}>
@@ -122,22 +138,25 @@ export default function LineareRegressionPage() {
           <h1 style={{ fontSize: "28px", fontWeight: "bold", marginBottom: "8px" }}>Simulation: Lineare Regression</h1>
           <section style={{ color: "#c9d1d9", marginBottom: "16px", textAlign: "left", lineHeight: 1.55 }}>
             <h2 style={{ fontSize: "18px", fontWeight: "600", color: "#e6edf3", margin: "0 0 10px" }}>Lernaufgaben</h2>
+            <p style={{ margin: "0 0 10px" }}>Mach dich mit der Simulation vertraut.</p>
             <ol style={{ margin: 0, paddingLeft: "22px" }}>
-              <li style={{ marginBottom: "6px" }}>Versuche jeweils, eine Gerade durch die Punkte zu legen, die die Datenpunkte am besten beschreibt.</li>
               <li style={{ marginBottom: "6px" }}>
-                Gib jeweils die Funktionsgleichung deiner Geraden in der Form <InlineMath math="f(x)=m\cdot x+t" /> an.
+                Versuche für jeden Datensatz jeweils, eine Gerade durch die Punkte zu legen, die die Datenpunkte am besten beschreibt
+                und gib jeweils deren Funktionsgleichung an.
               </li>
               <li style={{ marginBottom: "6px" }}>
-                Berechne:
+                Lese jeweils am Graphen ab oder berechne: (Mindestens drei Rechnungen)
                 <ul style={{ margin: "6px 0 0", paddingLeft: "22px" }}>
                   <li>Jeweils die Schuhgröße einer Person mit einer Körpergröße von <InlineMath math={String.raw`1{,}77\,\mathrm{m}`} /> und <InlineMath math={String.raw`1{,}1\,\mathrm{m}`} />.</li>
                   <li>Die Lerndauer einer Person mit der Note <InlineMath math={String.raw`2`} />.</li>
                   <li>In der Stadt hat ein neues Sonnenbrillengeschäft aufgemacht. Damit wurden sehr viel mehr Sonnenbrillen als die letzten Jahre verkauft, 200 Sonnenbrillen an der Zahl. Berechne, wie viel Eiscreme verkauft wurde.</li>
-                  <li>Die Anzahl der Bakterien nach <InlineMath math={String.raw`20`} /> Tagen.</li>
-                  <li>Das Leistungsvermögen einer Person mit einem Stresslevel von <InlineMath math={String.raw`8.9`} />.</li>
+                  <li>Anzahl der Bakterien nach <InlineMath math={String.raw`20`} /> Tagen.</li>
+                  <li>Das Leistungsvermögen bei einm Stresslevel von <InlineMath math={String.raw`8.9`} />.</li>
                 </ul>
               </li>
-              <li>Beurteile, wie sinnvoll deine Ergebnisse / Vorhersagen sind.</li>
+              <li>Beurteile, wie sinnvoll deine Vorhersagen sind.</li>
+              <li>Schau dir jetzt das unten eingebettete Video an und fülle damit die Lücken auf deinem Arbeitsblatt aus. </li>
+
             </ol>
           </section>
         </div>
@@ -286,9 +305,68 @@ export default function LineareRegressionPage() {
                   <button onClick={resetEditableDataset} style={{ padding: "10px 16px", backgroundColor: "transparent", color: "#1f6feb", border: "1px solid #1f6feb", borderRadius: "6px", cursor: "pointer", fontSize: "13px", fontWeight: "600" }}>↻ Punkte zurücksetzen</button>
                 )}
               </div>
-            </div>
 
+
+              {dataset.editable && (
+                <div style={{ marginTop: "18px", padding: "16px", borderRadius: "8px", border: "1px solid #30363d", backgroundColor: "#0d1117" }}>
+                  <div style={{ fontSize: "14px", fontWeight: "600", marginBottom: "12px" }}>Datenpunkte direkt eingeben</div>
+                  <div style={{ display: "grid", gap: "12px" }}>
+                    {dataset.points.map((point, index) => (
+                      <div key={point.id} style={{ display: "grid", gridTemplateColumns: "54px 1fr 54px 1fr", gap: "8px", alignItems: "center" }}>
+                        <span style={{ color: "#8b949e", fontSize: "12px" }}>{`P${index + 1}`}</span>
+                        <label style={{ display: "grid", gap: "4px", fontSize: "12px", color: "#8b949e" }}>
+                          <span>x</span>
+                          <input
+                            type="number"
+                            value={point.x}
+                            step="0.1"
+                            onChange={(e) => updateEditablePointValue(point.id, "x", e.target.value)}
+                            style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid #30363d", backgroundColor: "#0d1117", color: "#e6edf3", fontFamily: "'IBM Plex Mono', monospace", fontSize: "13px" }}
+                          />
+                        </label>
+                        <span style={{ color: "#8b949e", fontSize: "12px" }}>y</span>
+                        <label style={{ display: "grid", gap: "4px", fontSize: "12px", color: "#8b949e" }}>
+                          <input
+                            type="number"
+                            value={point.y}
+                            step="0.1"
+                            onChange={(e) => updateEditablePointValue(point.id, "y", e.target.value)}
+                            style={{ width: "100%", padding: "8px", borderRadius: "6px", border: "1px solid #30363d", backgroundColor: "#0d1117", color: "#e6edf3", fontFamily: "'IBM Plex Mono', monospace", fontSize: "13px" }}
+                          />
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+           
           </div>
+             <div
+              style={{
+                position: "relative",
+                paddingBottom: "56.25%", // 16:9 Format
+                height: 0,
+                overflow: "hidden",
+                borderRadius: "8px",
+                marginBottom: "24px",
+              }}
+            >
+              <iframe
+                src="https://www.youtube.com/embed/0Cduhc-UccU"
+                title="Lineare Regression erklärt"
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  width: "100%",
+                  height: "100%",
+                  border: 0,
+                }}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            </div>
         </div>
       </div>
     </div>
