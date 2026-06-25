@@ -1,8 +1,11 @@
-name: Deploy to GitHub Pages
+name: Website veröffentlichen
 
 on:
   push:
-    branches: ['main']
+    branches:
+      - main
+
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -10,30 +13,36 @@ permissions:
   id-token: write
 
 concurrency:
-  group: 'pages'
+  group: pages
   cancel-in-progress: true
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          cache: 'npm'
-      - run: npm ci
-      - run: npm run build
-      - uses: actions/upload-pages-artifact@v2
-        with:
-          path: 'dist'
 
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/deploy-pages@v2
-        id: deployment
+      - name: Repository herunterladen
+        uses: actions/checkout@v4
+
+      - name: Node.js einrichten
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Abhängigkeiten installieren
+        run: npm ci
+
+      - name: Website bauen
+        run: npm run build
+
+      - name: Pages konfigurieren
+        uses: actions/configure-pages@v5
+
+      - name: Build hochladen
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dist
+
+      - name: Website veröffentlichen
+        uses: actions/deploy-pages@v4
